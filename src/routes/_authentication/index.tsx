@@ -27,7 +27,15 @@ import { createMemeComment } from "../../api";
 export const MemeFeedPage: React.FC = () => {
   const token = useAuthToken();
 
-  const { isLoading, data: memes } = useMemeFeed();
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useMemeFeed();
+
+  const memes = data?.pages.flatMap((page) => page.results) ?? [];
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -188,6 +196,24 @@ export const MemeFeedPage: React.FC = () => {
             </Collapse>
           </VStack>
         ))}
+
+        {hasNextPage && (
+          <Box pt={4}>
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                background: "#f1f1f1",
+                cursor: "pointer",
+              }}
+            >
+              {isFetchingNextPage ? "Loading..." : "Load More"}
+            </button>
+          </Box>
+        )}
       </VStack>
     </Flex>
   );

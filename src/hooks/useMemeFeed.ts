@@ -1,44 +1,52 @@
-import { useQuery } from "@tanstack/react-query";
-import { getMemes, getUserById, getMemeComments, GetMemesResponse, GetMemeCommentsResponse, GetUserByIdResponse } from "../api";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  getMemes,
+  getUserById,
+  getMemeComments,
+} from "../api";
 import { useAuthToken } from "../contexts/authentication";
 
 export function useMemeFeed() {
   const token = useAuthToken();
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["memes"],
-    queryFn: async () => {
-      const memes: GetMemesResponse["results"] = [];
-      const firstPage = await getMemes(token, 1);
-      memes.push(...firstPage.results);
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const memePage = await getMemes(token, pageParam);
 
-      const memesWithAuthorAndComments = await Promise.all(
-        memes.map(async (meme) => {
+      const memesWithData = await Promise.all(
+        memePage.results.map(async (meme) => {
           const [author, commentPage] = await Promise.all([
             getUserById(token, meme.authorId),
             getMemeComments(token, meme.id, 1),
           ]);
 
-          const commentAuthors = await Promise.all(
-            commentPage.results.map((comment) =>
-              getUserById(token, comment.authorId)
-            )
+          const commentsWithAuthors = await Promise.all(
+            commentPage.results.map(async (comment) => {
+              const commentAuthor = await getUserById(token, comment.authorId);
+              return {
+                ...comment,
+                author: commentAuthor,
+              };
+            })
           );
-
-          const commentsWithAuthor = commentPage.results.map((comment, i) => ({
-            ...comment,
-            author: commentAuthors[i],
-          }));
 
           return {
             ...meme,
             author,
-            comments: commentsWithAuthor,
+            comments: commentsWithAuthors,
           };
         })
       );
 
-      return memesWithAuthorAndComments;
+      return {
+        results: memesWithData,
+        hasMore: memePage.total > pageParam * memePage.pageSize
+      };
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.hasMore ? allPages.length + 1 : undefined;
     },
   });
 }
