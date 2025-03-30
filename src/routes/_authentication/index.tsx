@@ -38,37 +38,36 @@ export const MemeFeedPage: React.FC = () => {
       const memes: GetMemesResponse["results"] = [];
       const firstPage = await getMemes(token, 1);
       memes.push(...firstPage.results);
-      const remainingPages =
-        Math.ceil(firstPage.total / firstPage.pageSize) - 1;
-      for (let i = 0; i < remainingPages; i++) {
-        const page = await getMemes(token, i + 2);
-        memes.push(...page.results);
-      }
-      const memesWithAuthorAndComments = [];
-      for (let meme of memes) {
-        const author = await getUserById(token, meme.authorId);
-        const comments: GetMemeCommentsResponse["results"] = [];
-        const firstPage = await getMemeComments(token, meme.id, 1);
-        comments.push(...firstPage.results);
-        const remainingCommentPages =
-          Math.ceil(firstPage.total / firstPage.pageSize) - 1;
-        for (let i = 0; i < remainingCommentPages; i++) {
-          const page = await getMemeComments(token, meme.id, i + 2);
-          comments.push(...page.results);
-        }
-        const commentsWithAuthor: (GetMemeCommentsResponse["results"][0] & {
-          author: GetUserByIdResponse;
-        })[] = [];
-        for (let comment of comments) {
-          const author = await getUserById(token, comment.authorId);
-          commentsWithAuthor.push({ ...comment, author });
-        }
-        memesWithAuthorAndComments.push({
-          ...meme,
-          author,
-          comments: commentsWithAuthor,
-        });
-      }
+      //const remainingPages = Math.ceil(firstPage.total / firstPage.pageSize) - 1;
+      //for (let i = 0; i < remainingPages; i++) {
+      //  const page = await getMemes(token, i + 2);
+      //  memes.push(...page.results);
+      //}
+      const memesWithAuthorAndComments = await Promise.all(
+        memes.map(async (meme) => {
+          const [author, commentPage] = await Promise.all([
+            getUserById(token, meme.authorId),
+            getMemeComments(token, meme.id, 1),
+          ]);
+    
+          const commentAuthors = await Promise.all(
+            commentPage.results.map((comment) =>
+              getUserById(token, comment.authorId)
+            )
+          );
+    
+          const commentsWithAuthor = commentPage.results.map((comment, i) => ({
+            ...comment,
+            author: commentAuthors[i],
+          }));
+    
+          return {
+            ...meme,
+            author,
+            comments: commentsWithAuthor,
+          };
+        })
+      );
       return memesWithAuthorAndComments;
     },
   });
