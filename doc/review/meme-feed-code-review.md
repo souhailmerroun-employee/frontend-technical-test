@@ -5,3 +5,15 @@ The meme feed is slow because it loads all memes, authors, and comments at once,
 
 2. 
 After limiting to one page of memes, we fetches meme authors and comment authors one at a time. This causes many separate API calls, especially when there are lots of comments. The solution is to load this data in parallel using Promise.all.
+
+debug
+0 
+0
+0
+9
+1
+146
+79
+80
+96
+91
