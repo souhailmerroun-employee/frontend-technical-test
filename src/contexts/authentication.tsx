@@ -1,9 +1,10 @@
 import { jwtDecode } from "jwt-decode";
-import {
+import React, {
   createContext,
   PropsWithChildren,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -35,18 +36,37 @@ export const AuthenticationProvider: React.FC<PropsWithChildren> = ({
     isAuthenticated: false,
   });
 
+  useEffect(() => {
+    const storedToken = localStorage.getItem("authToken");
+    if (storedToken) {
+      try {
+        const decoded = jwtDecode<{ id: string }>(storedToken);
+        setState({
+          isAuthenticated: true,
+          token: storedToken,
+          userId: decoded.id,
+        });
+      } catch (error) {
+        localStorage.removeItem("authToken");
+      }
+    }
+  }, []);
+
   const authenticate = useCallback(
     (token: string) => {
+      localStorage.setItem("authToken", token);
+      const decoded = jwtDecode<{ id: string }>(token);
       setState({
         isAuthenticated: true,
         token,
-        userId: jwtDecode<{ id: string }>(token).id,
+        userId: decoded.id,
       });
     },
     [setState],
   );
 
   const signout = useCallback(() => {
+    localStorage.removeItem("authToken");
     setState({ isAuthenticated: false });
   }, [setState]);
 
