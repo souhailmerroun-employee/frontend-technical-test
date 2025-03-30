@@ -4,6 +4,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { AuthenticationContext } from "../../../contexts/authentication";
 import { MemeFeedPage } from "../../../routes/_authentication/index";
 import { renderWithRouter } from "../../utils";
+import userEvent from "@testing-library/user-event";
 
 describe("routes/_authentication/index", () => {
   describe("MemeFeedPage", () => {
@@ -75,5 +76,26 @@ describe("routes/_authentication/index", () => {
         expect(screen.getByTestId("meme-comment-author-dummy_meme_id_1-dummy_comment_id_3")).toHaveTextContent('dummy_user_3');
       });
     });
+
+    it("should allow a user to add a comment and see it in the comments section", async () => {
+      renderMemeFeedPage();
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("meme-feed-loader")).not.toBeInTheDocument();
+      });
+    
+      const commentsToggle = await screen.findByTestId("meme-comments-section-dummy_meme_id_1");
+      await userEvent.click(commentsToggle);
+    
+      const newCommentText = "Hello from the test!";
+      const commentInput = screen.getByPlaceholderText("Type your comment here...");
+      await userEvent.type(commentInput, newCommentText);
+    
+      await userEvent.keyboard("{Enter}");
+    
+      await waitFor(() => {
+        expect(screen.getByText(newCommentText)).toBeInTheDocument();
+      });
+    });      
   });
 });

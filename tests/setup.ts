@@ -6,7 +6,10 @@ import { handlers } from './mocks/handlers';
 
 const server = setupServer(...handlers);
 
-beforeAll(() => server.listen());
+beforeAll(() => {
+  Object.defineProperty(window, "scrollTo", { value: () => {}, writable: true });
+  server.listen();
+});
 afterEach(() => {
   server.resetHandlers();
   cleanup();
